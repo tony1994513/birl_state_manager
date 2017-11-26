@@ -1,5 +1,6 @@
 Header header
-myo_driver/emgState emgState
-sensor_msgs/Imu imuState
-baxter_core_msgs/EndpointState endpointState
-sensor_msgs/JointState jointState
+myo_driver/emgState emgStates
+sensor_msgs/Imu imuStates
+baxter_core_msgs/EndpointState endpointStates
+sensor_msgs/JointState jointStates
+tf2_msgs/TFMessage tf_of_interest

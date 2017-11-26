@@ -14,6 +14,9 @@ find_package(catkin REQUIRED COMPONENTS
   myo_driver
   baxter_core_msgs
   sensor_msgs
+  tf2_msgs
+  tf
+  geometry_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -76,6 +79,7 @@ find_package(catkin REQUIRED COMPONENTS
    myo_driver
    baxter_core_msgs
    sensor_msgs
+   tf2_msgs
  )
 
 ################################################

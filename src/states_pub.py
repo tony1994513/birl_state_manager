@@ -1,52 +1,129 @@
-#!/usr/bin/env python
-import sys
+# import sys
 import rospy
 from states_manager.msg import multiModal
 from myo_driver.msg import emgState
 from sensor_msgs.msg import Imu
 from baxter_core_msgs.msg import EndpointState
 from sensor_msgs.msg import JointState
+from tf2_msgs.msg import TFMessage
+import tf
+from geometry_msgs.msg import TransformStamped
 
 
 def callback_emg(data):
+    global flag_emg
+    if not flag_emg:
+        flag_emg = True
+        print 'emg signals is OK!'
+
     global multiModal_states
     multiModal_states.header.stamp = rospy.Time.now()
-    multiModal_states.emgState = data
+    multiModal_states.emgStates = data
+
     
 def callback_imu(data):
+    global flag_imu
+    if not flag_imu:
+        flag_imu = True
+        print 'imu signals is OK!'
+
     global multiModal_states
     multiModal_states.header.stamp = rospy.Time.now()
-    multiModal_states.imuState = data
+    multiModal_states.imuStates = data
+
     
 def callback_endpoint_state(data):
+    global flag_endpoint_state
+    if not flag_endpoint_state:
+        flag_endpoint_state = True
+        print 'endpoint state signals is OK!'
+
     global multiModal_states
     multiModal_states.header.stamp = rospy.Time.now()
-    multiModal_states.endpointState = data
+    multiModal_states.endpointStates = data
+
     
-def callback_joint_state(data):
+def callback_joint_states(data):
+    global flag_joint_state
+    if not flag_joint_state:
+        flag_joint_state = True
+        print 'joint states signals is OK!'
+
     global multiModal_states
     if any("head_pan" in s for s in data.name):
         multiModal_states.header.stamp = rospy.Time.now()
-        multiModal_states.jointState = data
+        multiModal_states.jointStates = data
+
+
+def tfCompute(ref, des):
+    try:
+        global listener
+        (trans, rot) = listener.lookupTransform(ref, des, rospy.Time(0))
+        global flag_tf
+        if flag_tf == False:
+            flag_tf = True
+            print 'tf of interest signals is OK!'
+    except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+        return
+
+    transforms_temp = TransformStamped()
+    transforms_temp.transform.translation.x = trans[0]
+    transforms_temp.transform.translation.y = trans[1]
+    transforms_temp.transform.translation.z = trans[2]
+    transforms_temp.transform.rotation.x = rot[0]
+    transforms_temp.transform.rotation.y = rot[1]
+    transforms_temp.transform.rotation.z = rot[2]
+    transforms_temp.transform.rotation.w = rot[3]
+    transforms_temp.header.frame_id = ref
+    transforms_temp.child_frame_id = des
+    return transforms_temp
+
+
+def callback_tfoi(data):
+    '''
+    tfoi: tf of interest
+    '''
+    global multiModal_states
+    multiModal_states.header.stamp = rospy.Time.now()
+
+    tfoi = ['/head_1', '/neck_1', '/torso_1', '/left_shoulder_1', '/left_elbow_1', '/left_hand_1', '/right_shoulder_1', '/right_elbow_1',
+           '/right_hand_1', '/left_hip_1', '/left_knee_1', '/left_foot_1', '/right_hip_1', '/right_knee_1', '/right_foot_1']
+    multiModal_states.tf_of_interest.transforms = [TransformStamped()]*len(tfoi)
+
+    for idx, des in enumerate(tfoi):
+        des_tf = tfCompute('/base', des)
+        if(des_tf!=None):
+            multiModal_states.tf_of_interest.transforms[idx]=(des_tf)
 
 
 if __name__ == '__main__':
 
-    # the publish rate of multiModal_states
-    publish_rate = 50    
-    
-    global multiModal_states
-    multiModal_states = multiModal()
-    
     # ros node init
-    rospy.init_node('states_pub_node', anonymous=True)
-    
+    rospy.init_node('multi_modal_states_pub_node', anonymous=True)
+
+    # the publish rate of multiModal_states
+    publish_rate = 50
+
+    # the multimodal states to include all info of interest
+    multiModal_states = multiModal()
+
+    # the listener for tf of insterest
+    listener = tf.TransformListener()
+
+    # the flag
+    flag_emg = False
+    flag_imu = False
+    flag_endpoint_state = False
+    flag_joint_state = False
+    flag_tf = False
+
     # subscribe the states topics
     rospy.Subscriber("/myo_raw_emg_pub", emgState, callback_emg)
     rospy.Subscriber("/myo_raw_imu_pub", Imu, callback_imu)
     rospy.Subscriber("/robot/limb/left/endpoint_state", EndpointState, callback_endpoint_state)
-    rospy.Subscriber("/robot/joint_states", JointState, callback_joint_state)    
-    
+    rospy.Subscriber("/robot/joint_states", JointState, callback_joint_states)
+    rospy.Subscriber("/tf", TFMessage, callback_tfoi)
+
     # publish topic
     pub = rospy.Publisher("/multiModal_states",multiModal, queue_size=20)
     
@@ -54,6 +131,5 @@ if __name__ == '__main__':
     
     while not rospy.is_shutdown():
         pub.publish(multiModal_states)
-        print multiModal_states
         r.sleep()
 
