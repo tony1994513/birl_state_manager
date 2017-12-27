@@ -1,4 +1,5 @@
-# import sys
+#!/usr/bin/env python
+
 import rospy
 from states_manager.msg import multiModal
 from myo_driver.msg import emgState
@@ -55,7 +56,7 @@ def callback_joint_states(data):
         multiModal_states.jointStates = data
 
 
-def tfCompute(ref, des):
+def tf_compute(ref, des):
     try:
         global listener
         (trans, rot) = listener.lookupTransform(ref, des, rospy.Time(0))
@@ -80,20 +81,13 @@ def tfCompute(ref, des):
 
 
 def callback_tfoi(data):
-    '''
-    tfoi: tf of interest
-    '''
-    global multiModal_states
-    multiModal_states.header.stamp = rospy.Time.now()
-
-    tfoi = ['/head_1', '/neck_1', '/torso_1', '/left_shoulder_1', '/left_elbow_1', '/left_hand_1', '/right_shoulder_1', '/right_elbow_1',
-           '/right_hand_1', '/left_hip_1', '/left_knee_1', '/left_foot_1', '/right_hip_1', '/right_knee_1', '/right_foot_1']
-    multiModal_states.tf_of_interest.transforms = [TransformStamped()]*len(tfoi)
-
+    global tfoi
     for idx, des in enumerate(tfoi):
-        des_tf = tfCompute('/base', des)
-        if(des_tf!=None):
-            multiModal_states.tf_of_interest.transforms[idx]=(des_tf)
+        des_tf = tf_compute('/base', des)
+        if des_tf!=None:
+            global multiModal_states
+            multiModal_states.header.stamp = rospy.Time.now()
+            multiModal_states.tf_of_interest.transforms[idx] = des_tf
 
 
 if __name__ == '__main__':
@@ -104,10 +98,16 @@ if __name__ == '__main__':
     # the publish rate of multiModal_states
     publish_rate = 50
 
+    # tf of interest
+    tfoi = ['/head_1', '/neck_1', '/torso_1', '/left_shoulder_1', '/left_elbow_1', '/left_hand_1',
+            '/right_shoulder_1', '/right_elbow_1', '/right_hand_1', '/left_hip_1', '/left_knee_1',
+            '/left_foot_1', '/right_hip_1', '/right_knee_1', '/right_foot_1', 'left_hand', 'right_hand']
+
     # the multimodal states to include all info of interest
     multiModal_states = multiModal()
+    multiModal_states.tf_of_interest.transforms = [TransformStamped() for i in range(len(tfoi))]
 
-    # the listener for tf of insterest
+    # the listener for tf of interest
     listener = tf.TransformListener()
 
     # the flag
@@ -119,8 +119,8 @@ if __name__ == '__main__':
 
     # subscribe the states topics
     rospy.Subscriber("/myo_raw_emg_pub", emgState, callback_emg)
-    rospy.Subscriber("/myo_raw_imu_pub", Imu, callback_imu)
-    rospy.Subscriber("/robot/limb/left/endpoint_state", EndpointState, callback_endpoint_state)
+    #rospy.Subscriber("/myo_raw_imu_pub", Imu, callback_imu)
+    #rospy.Subscriber("/robot/limb/left/endpoint_state", EndpointState, callback_endpoint_state)
     rospy.Subscriber("/robot/joint_states", JointState, callback_joint_states)
     rospy.Subscriber("/tf", TFMessage, callback_tfoi)
 
