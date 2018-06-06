@@ -10,6 +10,7 @@ from tf2_msgs.msg import TFMessage
 import tf
 from geometry_msgs.msg import TransformStamped
 import ipdb
+import numpy as np
 
 def callback_emg(data):
     global flag_emg
@@ -56,10 +57,10 @@ def callback_joint_states(data):
         multiModal_states.jointStates = data
 
 
-def tf_compute(ref, des):
+def tf_compute(target, source):
     try:
         global listener
-        (trans, rot) = listener.lookupTransform(ref, des, rospy.Time(0))
+        (trans, rot) = listener.lookupTransform(target,source, rospy.Time(0))
         global flag_tf
         if flag_tf == False:
             flag_tf = True
@@ -75,16 +76,15 @@ def tf_compute(ref, des):
     transforms_temp.transform.rotation.y = rot[1]
     transforms_temp.transform.rotation.z = rot[2]
     transforms_temp.transform.rotation.w = rot[3]
-    transforms_temp.header.frame_id = ref
-    transforms_temp.child_frame_id = des
+    transforms_temp.header.frame_id = source
+    transforms_temp.child_frame_id = target
     return transforms_temp
 
-
+right_hand_list = []
 def callback_tfoi(data):
-    global tfoi
+    global tfoi,right_hand_list
     for idx, des in enumerate(tfoi):
-        des_tf = tf_compute('/base', des)
-        # rospy.loginfo("/base to"+ des +"is %s" %des_tf)
+        des_tf = tf_compute(des,"base")
         if des_tf!=None:
             global multiModal_states
             multiModal_states.header.stamp = rospy.Time.now()
@@ -103,7 +103,7 @@ if __name__ == '__main__':
     tfoi = ["/pelvis_xsens_new", "/l5_abdomen_down_xsens_new", "/l3_abdomen_up_xsens_new", "/t12_sternum_down_xsens_new", "/t8_sternum_up_xsens_new", "/neck_xsens_new", "/head_xsens_new",
     "/right_shoulder_xsens_new", "/right_upper_arm_xsens_new", "/right_forearm_xsens_new", "/right_hand_xsens_new", "/left_shoulder_xsens_new", "/left_upper_arm_xsens_new", "/left_forearm_xsens_new",
     "/left_hand_xsens_new", "/right_upper_leg_xsens_new", "/right_lower_leg_xsens_new", "/right_foot_xsens_new", "/right_toe_xsens_new", "/left_upper_leg_xsens_new", "/left_lower_leg_xsens_new", 
-    "/left_foot_xsens_new", "/left_toe_xsens_new"]
+    "/left_foot_xsens_new", "/left_toe_xsens_new","/left_hand","/right_hand"]
 
     # the multimodal states to include all info of interest
     multiModal_states = multiModal()
@@ -127,10 +127,9 @@ if __name__ == '__main__':
     rospy.Subscriber("/tf", TFMessage, callback_tfoi)
 
     # publish topic
-    pub = rospy.Publisher("/multiModal_states",multiModal, queue_size=20)
+    pub = rospy.Publisher("/multiModal_states",multiModal, queue_size=50)
     
     r = rospy.Rate(publish_rate)
-    
     while not rospy.is_shutdown():
         pub.publish(multiModal_states)
         r.sleep()
