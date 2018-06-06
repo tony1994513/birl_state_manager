@@ -100,10 +100,7 @@ if __name__ == '__main__':
     publish_rate = 50
 
     # tf of interest
-    tfoi = ["/pelvis_xsens_new", "/l5_abdomen_down_xsens_new", "/l3_abdomen_up_xsens_new", "/t12_sternum_down_xsens_new", "/t8_sternum_up_xsens_new", "/neck_xsens_new", "/head_xsens_new",
-    "/right_shoulder_xsens_new", "/right_upper_arm_xsens_new", "/right_forearm_xsens_new", "/right_hand_xsens_new", "/left_shoulder_xsens_new", "/left_upper_arm_xsens_new", "/left_forearm_xsens_new",
-    "/left_hand_xsens_new", "/right_upper_leg_xsens_new", "/right_lower_leg_xsens_new", "/right_foot_xsens_new", "/right_toe_xsens_new", "/left_upper_leg_xsens_new", "/left_lower_leg_xsens_new", 
-    "/left_foot_xsens_new", "/left_toe_xsens_new","/left_hand","/right_hand"]
+    tfoi = ["/left_hand_xsens_new","/right_hand_xsens_new","/left_hand","/right_hand"]
 
     # the multimodal states to include all info of interest
     multiModal_states = multiModal()
@@ -127,7 +124,7 @@ if __name__ == '__main__':
     rospy.Subscriber("/tf", TFMessage, callback_tfoi)
 
     # publish topic
-    pub = rospy.Publisher("/multiModal_states",multiModal, queue_size=50)
+    pub = rospy.Publisher("/multiModal_states",multiModal, queue_size=100)
     
     r = rospy.Rate(publish_rate)
     while not rospy.is_shutdown():
